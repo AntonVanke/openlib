@@ -1,5 +1,5 @@
 from . import api
-from .controller import User, Login, Reserve, Option
+from .controller import User, Login, Reserve, Option, Building, Room, Seat
 
 # 用户
 api.add_resource(User, '/user')
@@ -9,3 +9,9 @@ api.add_resource(Login, '/login')
 api.add_resource(Reserve, '/reserve')
 # 设置
 api.add_resource(Option, '/option', '/option/<name>')
+# 场馆
+api.add_resource(Building, '/building', '/building/<id>')
+# 房间
+api.add_resource(Room, '/room', '/room/<id>')
+# 座位
+api.add_resource(Seat, '/seat', '/seat/<id>')

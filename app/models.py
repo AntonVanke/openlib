@@ -2,7 +2,7 @@ import time
 import datetime
 
 from sqlalchemy import Column, Integer, String, TIMESTAMP, text, func
-from sqlalchemy.dialects.mysql import TINYINT
+from sqlalchemy.dialects.mysql import TINYINT, LONGTEXT
 
 from . import db, sha3
 
@@ -17,6 +17,8 @@ def _x(data):
     for _ in data:
         d = _.__dict__
         d.pop("_sa_instance_state")
+        if d.get("create_time", 0):
+            d["create_time"] = d["create_time"].__str__()
         new_data.append(d)
     return new_data
 
@@ -75,7 +77,7 @@ class OptionModel(db.Model):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False, comment='配置项')
-    value = Column(String(255), nullable=False, comment='配置值')
+    value = Column(LONGTEXT, nullable=False, comment='配置值')
 
     @staticmethod
     def is_option_exist(name):
@@ -128,11 +130,14 @@ class ReservationModel(db.Model):
     @staticmethod
     def get_enabled_reservations_by_user_id(user_id):
         """
-        TODO:获取用户有效预约
+        获取用户有效预约
         :param user_id:
         :return:
         """
         reservations = ReservationModel.query.filter(ReservationModel.user_id == user_id).all()
+        for _ in reservations:
+            if _.cancelled:
+                reservations.remove(_)
         return _x(reservations)
 
     @staticmethod
@@ -155,7 +160,6 @@ class ReservationModel(db.Model):
         获取座位的有效预约时间段
         :return:
         """
-        # TODO
         reservations = ReservationModel.query.filter(ReservationModel.seat_id == seat_id).all()
         # print(reservations)
         times = []

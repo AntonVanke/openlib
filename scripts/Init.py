@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, TIMESTAMP, text, func
-from sqlalchemy.dialects.mysql import TINYINT
+from sqlalchemy.dialects.mysql import TINYINT, LONGTEXT
 from sqlalchemy.ext.declarative import declarative_base
 
 HOSTNAME = "localhost"
@@ -35,7 +35,7 @@ class Option(db.Model):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False, comment='配置项')
-    value = Column(String(255), nullable=False, comment='配置值')
+    value = Column(LONGTEXT, nullable=False, comment='配置值')
 
 
 class Reservation(db.Model):

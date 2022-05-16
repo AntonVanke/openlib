@@ -13,7 +13,7 @@ from . import jwt
 @jwt.unauthorized_loader
 def invalid_token_callback(*args, **kwargs):
     return jsonify({
-        'code': 201,
+        'code': 298,
         'message': "Invalid token",
         'data': None
     }), 403
@@ -146,16 +146,16 @@ class Reserve(Resource):
                         # 在可用时间段
                         code = 200
                         message = "success"
-                        data = ReservationModel.get_reservations_by_user_id(user_id)
+                        data = ReservationModel.get_enabled_reservations_by_user_id(user_id)
                 if message != "success":
                     code = 202
                     message = "Invalid appointment time"
-                    data = available
+                    data = {"available_time_period": available}
             else:
                 # 不在时间段内， 返回可用时间段
                 code = 203
                 message = "Illegal time"
-                data = available
+                data = {"available_time_period": available}
 
         return {
             "code": code,
@@ -189,3 +189,24 @@ class Option(Resource):
             "message": message,
             "data": data
         }
+
+
+class Building(Resource):
+    """
+    分馆
+    """
+    pass
+
+
+class Room(Resource):
+    """
+    房间
+    """
+    pass
+
+
+class Seat(Resource):
+    """
+    座位
+    """
+    pass
