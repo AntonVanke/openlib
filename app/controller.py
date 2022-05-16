@@ -138,10 +138,11 @@ class Reserve(Resource):
         else:
             # 判断时间是否在正确的间隔
             now = int(datetime.datetime.now().timestamp())
+            available = ReservationModel.get_time_slot_by_seat_id(seat_id)
             if now <= start_time < end_time:
-                available = ReservationModel.get_time_slot_by_seat_id(seat_id)
                 for td in available:
                     if td[0] <= start_time and td[1] >= end_time:
+                        ReservationModel.add_reservation(user_id, seat_id, start_time, end_time)
                         # 在可用时间段
                         code = 200
                         message = "success"
@@ -149,9 +150,12 @@ class Reserve(Resource):
                 if message != "success":
                     code = 202
                     message = "Invalid appointment time"
+                    data = available
             else:
+                # 不在时间段内， 返回可用时间段
                 code = 203
                 message = "Illegal time"
+                data = available
 
         return {
             "code": code,

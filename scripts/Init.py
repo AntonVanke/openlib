@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, TIMESTAMP, text
+from sqlalchemy import Column, Integer, String, TIMESTAMP, text, func
 from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -47,6 +47,7 @@ class Reservation(db.Model):
     start_time = Column(Integer, nullable=False, comment='预约开始时间')
     end_time = Column(Integer, nullable=False, comment='预约结束时间')
     cancelled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='取消')
+    create_time = Column(TIMESTAMP, nullable=False, server_default=func.now(), comment='预约创建时间')
 
 
 class Room(db.Model):

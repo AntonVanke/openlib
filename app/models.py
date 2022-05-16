@@ -113,11 +113,22 @@ class ReservationModel(db.Model):
     start_time = Column(Integer, nullable=False, comment='预约开始时间')
     end_time = Column(Integer, nullable=False, comment='预约结束时间')
     cancelled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='取消')
+    create_time = Column(TIMESTAMP, nullable=False, server_default=func.now(), comment='预约创建时间')
 
     @staticmethod
     def get_reservations_by_user_id(user_id):
         """
         获取用户所有预约
+        :param user_id:
+        :return:
+        """
+        reservations = ReservationModel.query.filter(ReservationModel.user_id == user_id).all()
+        return _x(reservations)
+
+    @staticmethod
+    def get_enabled_reservations_by_user_id(user_id):
+        """
+        TODO:获取用户有效预约
         :param user_id:
         :return:
         """
