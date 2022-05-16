@@ -46,7 +46,7 @@ def _y(data):
     data.sort()
     for td in data:
         # 如果不是今天就跳过
-        if td[0] <= time_d[0] or td[1] >= time_d[-1]:
+        if td[0] < time_d[0] or td[1] > time_d[-1]:
             continue
         time_d.insert(-1, td[0])
         time_d.insert(-1, td[1])
@@ -212,7 +212,16 @@ class SeatModel(db.Model):
 
     id = Column(Integer, primary_key=True)
     room_id = Column(Integer, ForeignKey('room.id'), nullable=False, comment='房间ID')
-    enabled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='启用')
+    enabled = Column(TINYINT(1), nullable=False, server_default=text("'1'"), comment='启用')
+
+    @staticmethod
+    def get_time_slot_by_seat_id(seat_id):
+        """
+        获取座位的有效预约时段
+        :param seat_id:
+        :return:
+        """
+        ReservationModel.get_reservations_by_user_id(seat_id)
 
     @staticmethod
     def is_exist(id):

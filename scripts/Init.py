@@ -64,7 +64,7 @@ class Seat(db.Model):
 
     id = Column(Integer, primary_key=True)
     room_id = Column(Integer, ForeignKey('room.id'), nullable=False, comment='房间ID')
-    enabled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='启用')
+    enabled = Column(TINYINT(1), nullable=False, server_default=text("'1'"), comment='启用')
 
 
 class User(db.Model):
