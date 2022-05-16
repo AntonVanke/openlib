@@ -1,3 +1,5 @@
+import datetime
+
 from flask import jsonify
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
@@ -113,8 +115,11 @@ class Reserve(Resource):
 
     @jwt_required()
     def post(self):
-        code = 200
-        message = "success"
+        """
+        预约座位
+        """
+        code = 299
+        message = "Unknown error"
         data = None
 
         args = reqparse.RequestParser() \
@@ -122,16 +127,32 @@ class Reserve(Resource):
             .add_argument('start_time', type=str, location='json', required=True, help="开始时间不正确") \
             .add_argument('end_time', type=str, location='json', required=True, help="结束时间不正确") \
             .parse_args()
+        user_id = get_jwt_identity()
         seat_id = args["seat_id"]
-        start_time = args["start_time"]
-        end_time = args["end_time"]
+        start_time = int(args["start_time"])
+        end_time = int(args["end_time"])
         # 判断座位是否存在
         if not SeatModel.is_exist(seat_id):
             code = 201
             message = "Nonexistent seat"
         else:
-            pass
-        # 判断时间是否在正确的间隔
+            # 判断时间是否在正确的间隔
+            now = int(datetime.datetime.now().timestamp())
+            if now <= start_time < end_time:
+                available = ReservationModel.get_time_slot_by_seat_id(seat_id)
+                for td in available:
+                    if td[0] <= start_time and td[1] >= end_time:
+                        # 在可用时间段
+                        code = 200
+                        message = "success"
+                        data = ReservationModel.get_reservations_by_user_id(user_id)
+                if message != "success":
+                    code = 202
+                    message = "Invalid appointment time"
+            else:
+                code = 203
+                message = "Illegal time"
+
         return {
             "code": code,
             "message": message,

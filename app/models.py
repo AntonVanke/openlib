@@ -1,10 +1,13 @@
+import time
+import datetime
+
 from sqlalchemy import Column, Integer, String, TIMESTAMP, text, func
 from sqlalchemy.dialects.mysql import TINYINT
 
 from . import db, sha3
 
 
-def x(data):
+def _x(data):
     """
     将多个数据格式化
     :param data:
@@ -18,19 +21,53 @@ def x(data):
     return new_data
 
 
+def _y(data):
+    """
+    将预约时间段取反
+    :param data:
+    :return:
+    """
+    date = datetime.datetime.now()
+    y = date.year
+    m = date.month
+    d = date.day
+    # 获取配置项
+    _open_time = OptionModel.get_option_by_name("open_time")["value"]
+    _close_time = OptionModel.get_option_by_name("close_time")["value"]
+
+    # 获取今天的开启关闭时间
+    open_time = datetime.datetime.strptime(f"{y}-{m}-{d} {_open_time}", "%Y-%m-%d %H:%M")
+    close_time = datetime.datetime.strptime(f"{y}-{m}-{d} {_close_time}", "%Y-%m-%d %H:%M")
+
+    # 可用时间段
+    time_d = [int(open_time.timestamp()), int(close_time.timestamp())]
+
+    data.sort()
+    for td in data:
+        # 如果不是今天就跳过
+        if td[0] <= time_d[0] or td[1] >= time_d[-1]:
+            continue
+        time_d.insert(-1, td[0])
+        time_d.insert(-1, td[1])
+
+    # 返回可用时间段
+    print(time_d)
+    return list(zip(*[iter(time_d)] * 2))
+
+
 class BuildingModel(db.Model):
     __tablename__ = 'building'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False, comment='场馆名称')
-    open_time = Column(Integer, nullable=False, server_default=text("'0'"), comment='开启时间')
-    close_time = Column(Integer, nullable=False, server_default=text("'1440'"), comment='结束时间')
-    max_hour = Column(TINYINT, nullable=False, server_default=text("'0'"), comment='最大预约时间')
+    # open_time = Column(Integer, nullable=False, server_default=text("'0'"), comment='开启时间')
+    # close_time = Column(Integer, nullable=False, server_default=text("'1440'"), comment='结束时间')
+    # max_hour = Column(TINYINT, nullable=False, server_default=text("'0'"), comment='最大预约时间')
     enabled = Column(TINYINT(1), nullable=False, server_default=text("'1'"), comment='开启')
 
     def get_buildings(self):
         building = BuildingModel.query.all()
-        return x(building)
+        return _x(building)
 
 
 class OptionModel(db.Model):
@@ -55,7 +92,7 @@ class OptionModel(db.Model):
         获取所有配置项
         :return:
         """
-        return x(OptionModel.query.all())
+        return _x(OptionModel.query.all())
 
     @staticmethod
     def get_option_by_name(name):
@@ -64,7 +101,7 @@ class OptionModel(db.Model):
         :param name:
         :return:
         """
-        return x([OptionModel.query.filter(OptionModel.name == name).first()])[0]
+        return _x([OptionModel.query.filter(OptionModel.name == name).first()])[0]
 
 
 class ReservationModel(db.Model):
@@ -79,8 +116,52 @@ class ReservationModel(db.Model):
 
     @staticmethod
     def get_reservations_by_user_id(user_id):
+        """
+        获取用户所有预约
+        :param user_id:
+        :return:
+        """
         reservations = ReservationModel.query.filter(ReservationModel.user_id == user_id).all()
-        return x(reservations)
+        return _x(reservations)
+
+    @staticmethod
+    def get_reservations_by_seat_id(seat_id):
+        """
+        获取座位没有当前所有有效预约
+        :param seat_id:
+        :return:
+        """
+        reservations = ReservationModel.query.filter(ReservationModel.seat_id == seat_id).all()
+        res = _x(reservations)
+        for _r in range(len(res)):
+            if res[_r]["cancelled"]:
+                res.pop(_r)
+        return res
+
+    @staticmethod
+    def get_time_slot_by_seat_id(seat_id):
+        """
+        获取座位的有效预约时间段
+        :return:
+        """
+        # TODO
+        reservations = ReservationModel.query.filter(ReservationModel.seat_id == seat_id).all()
+        # print(reservations)
+        times = []
+        for _r in reservations:
+            if not _r.cancelled:
+                times.append([_r.start_time, _r.end_time])
+        return _y(times)
+
+    @staticmethod
+    def add_reservation(user_id, seat_id, start_time, end_time):
+        """
+        增加预约
+        :return:
+        """
+        data = ReservationModel(user_id=user_id, seat_id=seat_id, start_time=start_time, end_time=end_time)
+        db.session.add(data)
+        db.session.commit()
 
 
 class RoomModel(db.Model):
@@ -94,17 +175,17 @@ class RoomModel(db.Model):
     @staticmethod
     def get_rooms():
         rooms = RoomModel.query.all()
-        return x(rooms)
+        return _x(rooms)
 
     @staticmethod
     def get_rooms_by_building_id(building_id):
         rooms = RoomModel.query.filter(RoomModel.building_id == building_id).all()
-        return x(rooms)
+        return _x(rooms)
 
     @staticmethod
     def get_room_by_id(id):
         room = RoomModel.query.filter(RoomModel.id == id).all()
-        return x(room)[0]
+        return _x(room)[0]
 
 
 class SeatModel(db.Model):
@@ -138,7 +219,7 @@ class SeatModel(db.Model):
         :return:
         """
         seats = SeatModel.query.all()
-        return x(seats)
+        return _x(seats)
 
     @staticmethod
     def get_seats_by_room_id(room_id):
@@ -148,7 +229,7 @@ class SeatModel(db.Model):
         :return:
         """
         seats = SeatModel.query.filter(SeatModel.room_id == room_id).all()
-        return x(seats)
+        return _x(seats)
 
     @staticmethod
     def get_seat_by_id(id):
@@ -158,7 +239,7 @@ class SeatModel(db.Model):
         :return:
         """
         seat = SeatModel.query.filter(SeatModel.id == id).all()
-        return x(seat)[0]
+        return _x(seat)[0]
 
 
 class UserModel(db.Model):

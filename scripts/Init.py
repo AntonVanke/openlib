@@ -24,9 +24,9 @@ class Building(db.Model):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False, comment='场馆名称')
-    open_time = Column(Integer, nullable=False, server_default=text("'0'"), comment='开启时间')
-    close_time = Column(Integer, nullable=False, server_default=text("'1440'"), comment='结束时间')
-    max_hour = Column(Integer, nullable=False, server_default=text("'0'"), comment='最大预约时间')
+    # open_time = Column(Integer, nullable=False, server_default=text("'0'"), comment='开启时间')
+    # close_time = Column(Integer, nullable=False, server_default=text("'1440'"), comment='结束时间')
+    # max_hour = Column(Integer, nullable=False, server_default=text("'0'"), comment='最大预约时间')
     enabled = Column(TINYINT(1), nullable=False, server_default=text("'1'"), comment='开启')
 
 
