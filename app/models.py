@@ -60,10 +60,7 @@ class BuildingModel(db.Model):
     __tablename__ = 'building'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False, comment='场馆名称')
-    # open_time = Column(Integer, nullable=False, server_default=text("'0'"), comment='开启时间')
-    # close_time = Column(Integer, nullable=False, server_default=text("'1440'"), comment='结束时间')
-    # max_hour = Column(TINYINT, nullable=False, server_default=text("'0'"), comment='最大预约时间')
+    name = Column(String(100), nullable=False, unique=True, comment='场馆名称')
     enabled = Column(TINYINT(1), nullable=False, server_default=text("'1'"), comment='开启')
 
     @staticmethod
@@ -74,6 +71,48 @@ class BuildingModel(db.Model):
         """
         building = BuildingModel.query.all()
         return _x(building)
+
+    @staticmethod
+    def get_rooms_by_building(building_id):
+        """
+        获取分馆里的所有房间
+        :param building_id:
+        :return:
+        """
+        rooms = RoomModel.query.filter(RoomModel.building_id == building_id).all()
+        return _x(rooms)
+
+    @staticmethod
+    def add_building(data):
+        """
+        添加分馆
+        :return:
+        """
+        db.session.add(data)
+        db.session.commit()
+
+    @staticmethod
+    def del_building(building_id):
+        """
+        删除分馆
+        :return:
+        """
+        res = BuildingModel.query.filter(BuildingModel.id == building_id).delete()
+        db.session.commit()
+        return bool(res)
+
+    @staticmethod
+    def edit_building(building_id, name=None, enabled=None):
+        """
+        编辑分馆
+        :return:
+        """
+        building = BuildingModel.query.filter(BuildingModel.id == building_id).first()
+        if name is not None:
+            building.name = name
+        if enabled is not None:
+            building.enabled = enabled
+        db.session.commit()
 
 
 class OptionModel(db.Model):
@@ -165,7 +204,6 @@ class ReservationModel(db.Model):
         :return:
         """
         reservations = ReservationModel.query.filter(ReservationModel.seat_id == seat_id).all()
-        # print(reservations)
         times = []
         for _r in reservations:
             if not _r.cancelled:
@@ -197,14 +235,14 @@ class RoomModel(db.Model):
         return _x(rooms)
 
     @staticmethod
-    def get_rooms_by_building_id(building_id):
-        rooms = RoomModel.query.filter(RoomModel.building_id == building_id).all()
-        return _x(rooms)
-
-    @staticmethod
     def get_room_by_id(id):
         room = RoomModel.query.filter(RoomModel.id == id).all()
         return _x(room)[0]
+
+    @staticmethod
+    def get_seats_by_room_id(room_id):
+        seats = SeatModel.query.filter(SeatModel.room_id == room_id).all()
+        return _x(seats)
 
 
 class SeatModel(db.Model):
@@ -221,7 +259,7 @@ class SeatModel(db.Model):
         :param seat_id:
         :return:
         """
-        ReservationModel.get_reservations_by_user_id(seat_id)
+        return ReservationModel.get_time_slot_by_seat_id(seat_id)
 
     @staticmethod
     def is_exist(id):

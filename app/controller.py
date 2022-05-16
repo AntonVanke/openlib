@@ -4,7 +4,7 @@ from flask import jsonify
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
-from .models import UserModel, ReservationModel, RoomModel, SeatModel, OptionModel
+from .models import UserModel, ReservationModel, RoomModel, SeatModel, OptionModel, BuildingModel
 from . import jwt
 
 
@@ -132,7 +132,7 @@ class Reserve(Resource):
         start_time = int(args["start_time"])
         end_time = int(args["end_time"])
         # 判断座位是否存在
-        if not SeatModel.is_exist(seat_id):
+        if not SeatModel.is_exist(seat_id) and not SeatModel.is_usable_seat(seat_id):
             code = 201
             message = "Nonexistent seat"
         else:
@@ -195,7 +195,113 @@ class Building(Resource):
     """
     分馆
     """
-    pass
+
+    def get(self, building_id=0):
+        code = 200
+        message = "success"
+        if not building_id:
+            data = BuildingModel.get_buildings()
+        else:
+            data = BuildingModel.get_rooms_by_building(building_id)
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
+    @jwt_required()
+    def post(self, building_id=0):
+        code = 200
+        message = "success"
+        data = None
+        args = reqparse.RequestParser() \
+            .add_argument('name', type=str, location='json', required=False) \
+            .add_argument('enabled', type=str, location='json', required=False) \
+            .add_argument('_method', type=str, location='json', required=False) \
+            .parse_args()
+        if not building_id:
+            # 添加场馆
+            if args["name"]:
+                enabled = args["enabled"] or 1
+                for building in BuildingModel.get_buildings():
+                    if building["name"] == args["name"]:
+                        code = 203
+                        message = f"Duplicate fields: [name]:`{args['name']}`"
+                        return {
+                            "code": code,
+                            "message": message,
+                            "data": data
+                        }
+                BuildingModel.add_building(BuildingModel(name=args["name"], enabled=enabled))
+            else:
+                code = 201
+                message = f"`name`: Field does not exist"
+        else:
+            if str(args["_method"]).lower() == "delete":
+                # 删除一个场馆
+                return self.delete(building_id)
+            elif str(args["_method"]).lower() == "put":
+                # 修改场馆
+                return self.put(building_id, args)
+            else:
+                code = 210
+                message = "Ambiguous request"
+
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
+    @jwt_required()
+    def delete(self, building_id=0):
+        code = 200
+        message = "success"
+        data = None
+        if not building_id:
+            code = 202
+            message = "`building_id`: Field does not exist"
+        else:
+            if not BuildingModel.del_building(building_id):
+                code = 209
+                message = f"[id]:{building_id}: Not Found"
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
+    @jwt_required()
+    def put(self, building_id=0, args=None):
+        code = 200
+        message = "success"
+        data = None
+
+        if args is None:
+            args = reqparse.RequestParser() \
+                .add_argument('name', type=str, location='json', required=False) \
+                .add_argument('enabled', type=str, location='json', required=False) \
+                .parse_args()
+
+        if not building_id:
+            code = 202
+            message = f"[id]:{building_id}: Not Found"
+        else:
+            for building in BuildingModel.get_buildings():
+                if building["name"] == args["name"]:
+                    code = 203
+                    message = f"Duplicate fields: [name]:`{args['name']}`"
+                    return {
+                        "code": code,
+                        "message": message,
+                        "data": data
+                    }
+            BuildingModel.edit_building(building_id, name=args["name"], enabled=args["enabled"])
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
 
 
 class Room(Resource):

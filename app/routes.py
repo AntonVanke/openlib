@@ -10,8 +10,8 @@ api.add_resource(Reserve, '/reserve')
 # 设置
 api.add_resource(Option, '/option', '/option/<name>')
 # 场馆
-api.add_resource(Building, '/building', '/building/<id>')
+api.add_resource(Building, '/building', '/building/<building_id>')
 # 房间
-api.add_resource(Room, '/room', '/room/<id>')
+api.add_resource(Room, '/room', '/room/<room_id>')
 # 座位
-api.add_resource(Seat, '/seat', '/seat/<id>')
+api.add_resource(Seat, '/seat/<seat_id>')
