@@ -1,7 +1,6 @@
-import time
 import datetime
 
-from sqlalchemy import Column, Integer, String, TIMESTAMP, text, func
+from sqlalchemy import Column, Integer, String, TIMESTAMP, text, func, ForeignKey
 from sqlalchemy.dialects.mysql import TINYINT, LONGTEXT
 
 from . import db, sha3
@@ -67,7 +66,12 @@ class BuildingModel(db.Model):
     # max_hour = Column(TINYINT, nullable=False, server_default=text("'0'"), comment='最大预约时间')
     enabled = Column(TINYINT(1), nullable=False, server_default=text("'1'"), comment='开启')
 
-    def get_buildings(self):
+    @staticmethod
+    def get_buildings():
+        """
+        获取所有分馆
+        :return:
+        """
         building = BuildingModel.query.all()
         return _x(building)
 
@@ -110,8 +114,8 @@ class ReservationModel(db.Model):
     __tablename__ = 'reservation'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False, comment='用户ID')
-    seat_id = Column(Integer, nullable=False, comment='座位ID')
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False, comment='用户ID')
+    seat_id = Column(Integer, ForeignKey('seat.id'), nullable=False, comment='座位ID')
     start_time = Column(Integer, nullable=False, comment='预约开始时间')
     end_time = Column(Integer, nullable=False, comment='预约结束时间')
     cancelled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='取消')
@@ -184,7 +188,7 @@ class RoomModel(db.Model):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False, comment='房间名称')
-    building_id = Column(Integer, nullable=False, comment='启用')
+    building_id = Column(Integer, ForeignKey('building.id'), nullable=False, comment='启用')
     enabled = Column(TINYINT(1), nullable=False, server_default=text("'1'"), comment='启用')
 
     @staticmethod
@@ -207,7 +211,7 @@ class SeatModel(db.Model):
     __tablename__ = 'seat'
 
     id = Column(Integer, primary_key=True)
-    room_id = Column(Integer, nullable=False, comment='房间ID')
+    room_id = Column(Integer, ForeignKey('room.id'), nullable=False, comment='房间ID')
     enabled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='启用')
 
     @staticmethod

@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, TIMESTAMP, text, func
+from sqlalchemy import Column, Integer, String, TIMESTAMP, text, func, ForeignKey
 from sqlalchemy.dialects.mysql import TINYINT, LONGTEXT
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -42,8 +42,8 @@ class Reservation(db.Model):
     __tablename__ = 'reservation'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False, comment='用户ID')
-    seat_id = Column(Integer, nullable=False, comment='座位ID')
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False, comment='用户ID')
+    seat_id = Column(Integer, ForeignKey('seat.id'), nullable=False, comment='座位ID')
     start_time = Column(Integer, nullable=False, comment='预约开始时间')
     end_time = Column(Integer, nullable=False, comment='预约结束时间')
     cancelled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='取消')
@@ -54,7 +54,7 @@ class Room(db.Model):
     __tablename__ = 'room'
 
     id = Column(Integer, primary_key=True)
-    building_id = Column(Integer, nullable=False, comment='启用')
+    building_id = Column(Integer, ForeignKey('building.id'), nullable=False, comment='启用')
     name = Column(String(100), nullable=False, comment='房间名称')
     enabled = Column(TINYINT(1), nullable=False, server_default=text("'1'"), comment='启用')
 
@@ -63,7 +63,7 @@ class Seat(db.Model):
     __tablename__ = 'seat'
 
     id = Column(Integer, primary_key=True)
-    room_id = Column(Integer, nullable=False, comment='房间ID')
+    room_id = Column(Integer, ForeignKey('room.id'), nullable=False, comment='房间ID')
     enabled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='启用')
 
 
