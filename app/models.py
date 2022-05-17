@@ -322,6 +322,7 @@ class UserModel(db.Model):
     create_time = Column(TIMESTAMP, nullable=False, server_default=func.now(), comment='创建账户时间')
     update_time = Column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
     enabled = Column(TINYINT(1), nullable=False, server_default=text("1"))
+    type = Column(TINYINT, nullable=False, server_default=text("1"), comment='用户类型')
 
     @staticmethod
     def get_user_info(id):

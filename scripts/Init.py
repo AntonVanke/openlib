@@ -81,6 +81,7 @@ class User(db.Model):
     create_time = db.Column(TIMESTAMP, nullable=False, server_default=db.func.now(), comment='创建账户时间')
     update_time = db.Column(TIMESTAMP, nullable=False, server_default=db.func.now(), onupdate=db.func.now())
     enabled = db.Column(TINYINT(1), nullable=False, server_default=db.text("1"))
+    type = Column(TINYINT, nullable=False, server_default=text("1"), comment='用户类型')
 
 
 if __name__ == '__main__':
