@@ -252,7 +252,7 @@ class Option(Resource):
                 "code": 302,
                 "message": "访问受限",
                 "data": None
-            }, 403
+            }
         if name is None:
             return {
                 "code": 202,
@@ -318,7 +318,7 @@ class Building(Resource):
                 "code": 302,
                 "message": "访问受限",
                 "data": None
-            }, 403
+            }
         args = reqparse.RequestParser() \
             .add_argument('name', type=str, location='json', required=False) \
             .add_argument('enabled', type=str, location='json', required=False) \
@@ -406,7 +406,7 @@ class Building(Resource):
                 "code": 302,
                 "message": "访问受限",
                 "data": None
-            }, 403
+            }
 
         if args is None:
             args = reqparse.RequestParser() \
