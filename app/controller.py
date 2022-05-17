@@ -14,7 +14,7 @@ from . import jwt
 def invalid_token_callback(*args, **kwargs):
     return jsonify({
         'code': 301,
-        'message': "Invalid token",
+        'message': "token 无效",
         'data': None
     }), 403
 
@@ -38,13 +38,13 @@ class Login(Resource):
 
         if not flag_user_exist:
             code = 201
-            message = "Nonexistent user"
+            message = "用户不存在"
         elif not flag_password_correct:
             code = 202
-            message = "Wrong password"
+            message = "密码错误"
         else:
             code = 200
-            message = "success"
+            message = "成功"
             data = {
                 "token": create_access_token(identity={"id": user.id, "type": user.type})
             }
@@ -64,7 +64,7 @@ class User(Resource):
         :return:
         """
         code = 200
-        message = "success"
+        message = "成功"
         data = UserModel.get_user_info(get_jwt_identity()["id"])
         return {
             "code": code,
@@ -79,7 +79,7 @@ class User(Resource):
         :return:
         """
         code = 200
-        message = "success"
+        message = "成功"
         data = None
 
         args = reqparse.RequestParser() \
@@ -89,10 +89,10 @@ class User(Resource):
         # 判断新密码是否达到指定长度
         if len(args["new_password"]) < 8:
             code = 201
-            message = "Irregular new password"
+            message = "无效的密码长度"
         elif not UserModel.update_password(get_jwt_identity()['id'], args["old_password"], args["new_password"]):
             code = 202
-            message = "Invalid old password"
+            message = "旧密码错误"
 
         return {
             "code": code,
@@ -105,7 +105,7 @@ class Reserve(Resource):
     @jwt_required()
     def get(self, reservation_id=None):
         code = 200
-        message = "success"
+        message = "成功"
         if reservation_id is None:
             data = ReservationModel.get_reservations_by_user_id(user_id=get_jwt_identity()["id"])
         else:
@@ -122,7 +122,7 @@ class Reserve(Resource):
         预约座位
         """
         code = 299
-        message = "Unknown error"
+        message = "未知错误"
         data = None
 
         args = reqparse.RequestParser() \
@@ -139,7 +139,7 @@ class Reserve(Resource):
         if args["start_time"] is None or args["end_time"] is None:
             return {
                 "code": 202,
-                "message": "`start_time` or `end_time`: does not exist",
+                "message": "`start_time` 或 `end_time`: 请求字段不存在",
                 "data": None
             }
         seat_id = args["seat_id"]
@@ -149,7 +149,7 @@ class Reserve(Resource):
         # 判断座位是否存在
         if not SeatModel.is_exist(seat_id) and not SeatModel.is_usable_seat(seat_id):
             code = 201
-            message = "Nonexistent seat"
+            message = f"`seat_id:`{seat_id} 不存在的座位"
         else:
             # 判断时间是否在正确的间隔
             now = int(datetime.datetime.now().timestamp())
@@ -160,16 +160,16 @@ class Reserve(Resource):
                         ReservationModel.add_reservation(user_id, seat_id, start_time, end_time)
                         # 在可用时间段
                         code = 200
-                        message = "success"
+                        message = "成功"
                         data = ReservationModel.get_enabled_reservations_by_user_id(user_id)
-                if message != "success":
+                if message != "成功":
                     code = 202
-                    message = "Invalid appointment time"
+                    message = "预约时间段冲突"
                     data = {"available_time_period": available}
             else:
                 # 不在时间段内， 返回可用时间段
                 code = 203
-                message = "Illegal time"
+                message = "无效的预约时间"
                 data = {"available_time_period": available}
 
         return {
@@ -189,15 +189,15 @@ class Reserve(Resource):
         :return:
         """
         code = 200
-        message = "success"
+        message = "成功"
         data = None
         if reservation_id is None:
             code = 204
-            message = "`reservation_id`: does not exist"
+            message = "`reservation_id`: 请求字段不存在"
         else:
             if not ReservationModel.cancel(reservation_id):
                 code = 205
-                message = "Invalid reservation"
+                message = "无效的预约"
 
         return {
             "code": code,
@@ -210,7 +210,7 @@ class Option(Resource):
     @jwt_required()
     def get(self, name=None):
         code = 200
-        message = "success"
+        message = "成功"
         data = None
 
         if not name:
@@ -243,14 +243,14 @@ class Option(Resource):
         :return:
         """
         code = 200
-        message = "success"
+        message = "成功"
         data = None
 
         if int(get_jwt_identity()["type"]) != 2:
             # 如果不是管理员退出
             return {
                 "code": 302,
-                "message": "Access restricted",
+                "message": "访问受限",
                 "data": None
             }
         if name is None:
@@ -291,7 +291,7 @@ class Building(Resource):
         :return:
         """
         code = 200
-        message = "success"
+        message = "成功"
         if not building_id:
             data = BuildingModel.get_buildings()
         else:
@@ -310,13 +310,13 @@ class Building(Resource):
         :return:
         """
         code = 200
-        message = "success"
+        message = "成功"
         data = None
         if int(get_jwt_identity()["type"]) != 2:
             # 如果不是管理员退出
             return {
                 "code": 302,
-                "message": "Access restricted",
+                "message": "访问受限",
                 "data": None
             }
         args = reqparse.RequestParser() \
@@ -366,13 +366,13 @@ class Building(Resource):
         :return:
         """
         code = 200
-        message = "success"
+        message = "成功"
         data = None
         if int(get_jwt_identity()["type"]) != 2:
             # 如果不是管理员退出
             return {
                 "code": 302,
-                "message": "Access restricted",
+                "message": "访问受限",
                 "data": None
             }
         if not building_id:
@@ -397,14 +397,14 @@ class Building(Resource):
         :return:
         """
         code = 200
-        message = "success"
+        message = "成功"
         data = None
 
         if int(get_jwt_identity()["type"]) != 2:
             # 如果不是管理员退出
             return {
                 "code": 302,
-                "message": "Access restricted",
+                "message": "访问受限",
                 "data": None
             }
 
@@ -447,7 +447,7 @@ class Room(Resource):
         :return:
         """
         code = 200
-        message = "success"
+        message = "成功"
         if not room_id:
             data = RoomModel.get_rooms()
         else:
@@ -470,14 +470,14 @@ class Seat(Resource):
 
     def get(self, seat_id):
         code = 200
-        message = "success"
+        message = "成功"
         print(SeatModel.is_exist(seat_id), SeatModel.is_usable_seat(seat_id))
         if SeatModel.is_exist(seat_id) and SeatModel.is_usable_seat(seat_id):
             data = SeatModel.get_time_slot_by_seat_id(seat_id)
         else:
             data = None
             code = 201
-            message = "Invalid seat"
+            message = "无效的座位"
         return {
             "code": code,
             "message": message,
