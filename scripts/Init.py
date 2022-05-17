@@ -34,7 +34,7 @@ class Option(db.Model):
     __tablename__ = 'option'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(255), nullable=False, comment='配置项')
+    name = Column(String(255), nullable=False, unique=True, comment='配置项')
     value = Column(LONGTEXT, nullable=False, comment='配置值')
 
 

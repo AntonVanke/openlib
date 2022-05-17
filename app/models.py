@@ -119,7 +119,7 @@ class OptionModel(db.Model):
     __tablename__ = 'option'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(255), nullable=False, comment='配置项')
+    name = Column(String(255), nullable=False, unique=True, comment='配置项')
     value = Column(LONGTEXT, nullable=False, comment='配置值')
 
     @staticmethod
@@ -147,6 +147,21 @@ class OptionModel(db.Model):
         :return:
         """
         return _x([OptionModel.query.filter(OptionModel.name == name).first()])[0]
+
+    @staticmethod
+    def update_option(name, value):
+        """
+        修改配置项
+        :param name:
+        :param value:
+        :return:
+        """
+        option = OptionModel.query.filter(OptionModel.name == name).first()
+        if option is None:
+            return False
+        option.value = value
+        db.session.commit()
+        return True
 
 
 class ReservationModel(db.Model):
@@ -184,6 +199,16 @@ class ReservationModel(db.Model):
         return _x(reservations)
 
     @staticmethod
+    def get_reservations_by_reservation_id(reservation_id):
+        """
+        获取预约详情
+        :param reservation_id:
+        :return:
+        """
+        reservation = ReservationModel.query.filter(ReservationModel.id == reservation_id).all()
+        return _x(reservation)
+
+    @staticmethod
     def get_reservations_by_seat_id(seat_id):
         """
         获取座位没有当前所有有效预约
@@ -219,6 +244,16 @@ class ReservationModel(db.Model):
         data = ReservationModel(user_id=user_id, seat_id=seat_id, start_time=start_time, end_time=end_time)
         db.session.add(data)
         db.session.commit()
+
+    @staticmethod
+    def cancel(reservation_id):
+        reservation = ReservationModel.query.filter(ReservationModel.id == reservation_id).all()
+        if not bool(reservation):
+            return False
+        else:
+            reservation[0].cancelled = 1
+            db.session.commit()
+            return True
 
 
 class RoomModel(db.Model):
@@ -335,6 +370,7 @@ class UserModel(db.Model):
         if user:
             return {
                 "id": user.id,
+                "type": user.type,
                 "username": user.username,
                 "name": user.name,
                 "school": user.school,

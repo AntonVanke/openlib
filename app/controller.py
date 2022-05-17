@@ -13,7 +13,7 @@ from . import jwt
 @jwt.unauthorized_loader
 def invalid_token_callback(*args, **kwargs):
     return jsonify({
-        'code': 298,
+        'code': 301,
         'message': "Invalid token",
         'data': None
     }), 403
@@ -46,7 +46,7 @@ class Login(Resource):
             code = 200
             message = "success"
             data = {
-                "token": create_access_token(identity=user.id)
+                "token": create_access_token(identity={"id": user.id, "type": user.type})
             }
 
         return jsonify({
@@ -65,7 +65,7 @@ class User(Resource):
         """
         code = 200
         message = "success"
-        data = UserModel.get_user_info(get_jwt_identity())
+        data = UserModel.get_user_info(get_jwt_identity()["id"])
         return {
             "code": code,
             "message": message,
@@ -90,7 +90,7 @@ class User(Resource):
         if len(args["new_password"]) < 8:
             code = 201
             message = "Irregular new password"
-        elif not UserModel.update_password(get_jwt_identity(), args["old_password"], args["new_password"]):
+        elif not UserModel.update_password(get_jwt_identity()['id'], args["old_password"], args["new_password"]):
             code = 202
             message = "Invalid old password"
 
@@ -103,10 +103,13 @@ class User(Resource):
 
 class Reserve(Resource):
     @jwt_required()
-    def get(self):
+    def get(self, reservation_id=None):
         code = 200
         message = "success"
-        data = ReservationModel.get_reservations_by_user_id(user_id=get_jwt_identity())
+        if reservation_id is None:
+            data = ReservationModel.get_reservations_by_user_id(user_id=get_jwt_identity()["id"])
+        else:
+            data = ReservationModel.get_reservations_by_reservation_id(reservation_id)
         return {
             "code": code,
             "message": message,
@@ -114,7 +117,7 @@ class Reserve(Resource):
         }
 
     @jwt_required()
-    def post(self):
+    def post(self, reservation_id=None):
         """
         预约座位
         """
@@ -123,12 +126,24 @@ class Reserve(Resource):
         data = None
 
         args = reqparse.RequestParser() \
-            .add_argument('seat_id', type=str, location='json', required=True, help="座位号不能为空") \
-            .add_argument('start_time', type=str, location='json', required=True, help="开始时间不正确") \
-            .add_argument('end_time', type=str, location='json', required=True, help="结束时间不正确") \
+            .add_argument('seat_id', type=str, location='json', required=False, help="座位号不能为空") \
+            .add_argument('start_time', type=str, location='json', required=False) \
+            .add_argument('end_time', type=str, location='json', required=False) \
+            .add_argument('_method', type=str, location='json', required=False) \
             .parse_args()
-        user_id = get_jwt_identity()
+
+        if str(args["_method"]).lower() == "delete":
+            # 如果是取消预约
+            return self.delete(reservation_id)
+
+        if args["start_time"] is None or args["end_time"] is None:
+            return {
+                "code": 202,
+                "message": "`start_time` or `end_time`: does not exist",
+                "data": None
+            }
         seat_id = args["seat_id"]
+        user_id = get_jwt_identity()["id"]
         start_time = int(args["start_time"])
         end_time = int(args["end_time"])
         # 判断座位是否存在
@@ -167,6 +182,29 @@ class Reserve(Resource):
         # print(SeatModel.get_seat_by_id(seat_id))
         # print(RoomModel.get_rooms())
 
+    @jwt_required()
+    def delete(self, reservation_id=None):
+        """
+        取消预约
+        :return:
+        """
+        code = 200
+        message = "success"
+        data = None
+        if reservation_id is None:
+            code = 204
+            message = "`reservation_id`: does not exist"
+        else:
+            if not ReservationModel.cancel(reservation_id):
+                code = 205
+                message = "Invalid reservation"
+
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
 
 class Option(Resource):
     @jwt_required()
@@ -190,6 +228,56 @@ class Option(Resource):
             "data": data
         }
 
+    @jwt_required()
+    def post(self, name=None, args=None):
+        """
+        修改设置项
+        :return:
+        """
+        return self.put(name, args)
+
+    @jwt_required()
+    def put(self, name=None, args=None):
+        """
+        修改设置项
+        :return:
+        """
+        code = 200
+        message = "success"
+        data = None
+
+        if int(get_jwt_identity()["type"]) != 2:
+            # 如果不是管理员退出
+            return {
+                "code": 302,
+                "message": "Access restricted",
+                "data": None
+            }
+        if name is None:
+            return {
+                "code": 202,
+                "message": "`name`: Field does not exist",
+                "data": None
+            }
+        if args is None:
+            args = reqparse.RequestParser() \
+                .add_argument('value', type=str, location='json', required=False) \
+                .parse_args()
+        if args["value"] is None:
+            return {
+                "code": 202,
+                "message": "`value`: Field does not exist",
+                "data": None
+            }
+        if not OptionModel.update_option(name, args["value"]):
+            code = 203
+            message = f"{name}: This option item does not exist"
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
 
 class Building(Resource):
     """
@@ -197,6 +285,11 @@ class Building(Resource):
     """
 
     def get(self, building_id=0):
+        """
+        获取建筑信息
+        :param building_id:
+        :return:
+        """
         code = 200
         message = "success"
         if not building_id:
@@ -211,9 +304,21 @@ class Building(Resource):
 
     @jwt_required()
     def post(self, building_id=0):
+        """
+        管理员: 添加或修改建筑信息
+        :param building_id:
+        :return:
+        """
         code = 200
         message = "success"
         data = None
+        if int(get_jwt_identity()["type"]) != 2:
+            # 如果不是管理员退出
+            return {
+                "code": 302,
+                "message": "Access restricted",
+                "data": None
+            }
         args = reqparse.RequestParser() \
             .add_argument('name', type=str, location='json', required=False) \
             .add_argument('enabled', type=str, location='json', required=False) \
@@ -255,9 +360,21 @@ class Building(Resource):
 
     @jwt_required()
     def delete(self, building_id=0):
+        """
+        管理员: 删除场馆
+        :param building_id:
+        :return:
+        """
         code = 200
         message = "success"
         data = None
+        if int(get_jwt_identity()["type"]) != 2:
+            # 如果不是管理员退出
+            return {
+                "code": 302,
+                "message": "Access restricted",
+                "data": None
+            }
         if not building_id:
             code = 202
             message = "`building_id`: Field does not exist"
@@ -273,9 +390,23 @@ class Building(Resource):
 
     @jwt_required()
     def put(self, building_id=0, args=None):
+        """
+        管理员: 修改场馆
+        :param building_id:
+        :param args:
+        :return:
+        """
         code = 200
         message = "success"
         data = None
+
+        if int(get_jwt_identity()["type"]) != 2:
+            # 如果不是管理员退出
+            return {
+                "code": 302,
+                "message": "Access restricted",
+                "data": None
+            }
 
         if args is None:
             args = reqparse.RequestParser() \
@@ -308,11 +439,51 @@ class Room(Resource):
     """
     房间
     """
-    pass
+
+    def get(self, room_id=0):
+        """
+        获取房间信息或房间里的seat
+        :param room_id:
+        :return:
+        """
+        code = 200
+        message = "success"
+        if not room_id:
+            data = RoomModel.get_rooms()
+        else:
+            data = RoomModel.get_seats_by_room_id(room_id)
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
+    @jwt_required()
+    def post(self):
+        pass
 
 
 class Seat(Resource):
     """
     座位
     """
-    pass
+
+    def get(self, seat_id):
+        code = 200
+        message = "success"
+        print(SeatModel.is_exist(seat_id), SeatModel.is_usable_seat(seat_id))
+        if SeatModel.is_exist(seat_id) and SeatModel.is_usable_seat(seat_id):
+            data = SeatModel.get_time_slot_by_seat_id(seat_id)
+        else:
+            data = None
+            code = 201
+            message = "Invalid seat"
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
+    @jwt_required()
+    def post(self):
+        pass
