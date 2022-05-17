@@ -12,11 +12,11 @@ from . import jwt
 @jwt.invalid_token_loader
 @jwt.unauthorized_loader
 def invalid_token_callback(*args, **kwargs):
-    return jsonify({
+    return {
         'code': 301,
         'message': "token 无效",
         'data': None
-    }), 403
+    }
 
 
 class Login(Resource):
@@ -220,7 +220,7 @@ class Option(Resource):
                 data = [OptionModel.get_option_by_name(name)]
             else:
                 code = 201
-                message = f"{name}: This option item does not exist"
+                message = f"{name}: 查询不存在"
 
         return {
             "code": code,
@@ -252,11 +252,11 @@ class Option(Resource):
                 "code": 302,
                 "message": "访问受限",
                 "data": None
-            }
+            }, 403
         if name is None:
             return {
                 "code": 202,
-                "message": "`name`: Field does not exist",
+                "message": "`name`: 请求字段不存在",
                 "data": None
             }
         if args is None:
@@ -266,12 +266,12 @@ class Option(Resource):
         if args["value"] is None:
             return {
                 "code": 202,
-                "message": "`value`: Field does not exist",
+                "message": "`value`: 请求字段不存在",
                 "data": None
             }
         if not OptionModel.update_option(name, args["value"]):
             code = 203
-            message = f"{name}: This option item does not exist"
+            message = f"{name}: 查询不存在"
         return {
             "code": code,
             "message": message,
@@ -318,7 +318,7 @@ class Building(Resource):
                 "code": 302,
                 "message": "访问受限",
                 "data": None
-            }
+            }, 403
         args = reqparse.RequestParser() \
             .add_argument('name', type=str, location='json', required=False) \
             .add_argument('enabled', type=str, location='json', required=False) \
@@ -331,7 +331,7 @@ class Building(Resource):
                 for building in BuildingModel.get_buildings():
                     if building["name"] == args["name"]:
                         code = 203
-                        message = f"Duplicate fields: [name]:`{args['name']}`"
+                        message = f"重复的字段: [name]:`{args['name']}`"
                         return {
                             "code": code,
                             "message": message,
@@ -340,7 +340,7 @@ class Building(Resource):
                 BuildingModel.add_building(BuildingModel(name=args["name"], enabled=enabled))
             else:
                 code = 201
-                message = f"`name`: Field does not exist"
+                message = f"`name`: 请求字段不存在"
         else:
             if str(args["_method"]).lower() == "delete":
                 # 删除一个场馆
@@ -350,7 +350,7 @@ class Building(Resource):
                 return self.put(building_id, args)
             else:
                 code = 210
-                message = "Ambiguous request"
+                message = "不明确的请求"
 
         return {
             "code": code,
@@ -377,11 +377,11 @@ class Building(Resource):
             }
         if not building_id:
             code = 202
-            message = "`building_id`: Field does not exist"
+            message = "`building_id`: 请求的字段不存在"
         else:
             if not BuildingModel.del_building(building_id):
                 code = 209
-                message = f"[id]:{building_id}: Not Found"
+                message = f"[id]:{building_id}: 查询不存在"
         return {
             "code": code,
             "message": message,
@@ -406,7 +406,7 @@ class Building(Resource):
                 "code": 302,
                 "message": "访问受限",
                 "data": None
-            }
+            }, 403
 
         if args is None:
             args = reqparse.RequestParser() \
@@ -416,12 +416,12 @@ class Building(Resource):
 
         if not building_id:
             code = 202
-            message = f"[id]:{building_id}: Not Found"
+            message = f"[id]:{building_id}: 查询不存在"
         else:
             for building in BuildingModel.get_buildings():
                 if building["name"] == args["name"]:
                     code = 203
-                    message = f"Duplicate fields: [name]:`{args['name']}`"
+                    message = f"重复的字段: [name]:`{args['name']}`"
                     return {
                         "code": code,
                         "message": message,
