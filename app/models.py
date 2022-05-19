@@ -173,6 +173,8 @@ class ReservationModel(db.Model):
     start_time = Column(Integer, nullable=False, comment='预约开始时间')
     end_time = Column(Integer, nullable=False, comment='预约结束时间')
     cancelled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='取消')
+    # 1: 预约；2: 取消；3:进行中；4: 关闭；5：离开；6：迟到
+    # status = Column(Integer, nullable=False, server_default=text("'1'"), comment='状态')
     create_time = Column(TIMESTAMP, nullable=False, server_default=func.now(), comment='预约创建时间')
 
     @staticmethod
