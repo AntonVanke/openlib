@@ -207,7 +207,6 @@ class Reserve(Resource):
 
 
 class Option(Resource):
-    @jwt_required()
     def get(self, name=None):
         code = 200
         message = "成功"
