@@ -4,9 +4,13 @@ from flask_jwt_extended import JWTManager
 from flask_restful import Api
 
 from .config import Config
+from flask_apscheduler import APScheduler
 
 app = Flask(__name__)
 app.config.from_object(Config)
+scheduler = APScheduler()
+scheduler.init_app(app)
+scheduler.start()
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 api = Api(app, default_mediatype="application/json")

@@ -1,11 +1,12 @@
 import datetime
+import time
 
 from flask import jsonify
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
-from .models import UserModel, ReservationModel, RoomModel, SeatModel, OptionModel, BuildingModel
-from . import jwt
+from .models import UserModel, ReservationModel, RoomModel, SeatModel, OptionModel, BuildingModel, StatisticsModel
+from . import jwt, scheduler
 
 
 @jwt.expired_token_loader
@@ -177,10 +178,6 @@ class Reserve(Resource):
             "message": message,
             "data": data
         }
-        # print(seat_id, start_time, end_time)
-        # print(SeatModel.is_exist(seat_id))
-        # print(SeatModel.get_seat_by_id(seat_id))
-        # print(RoomModel.get_rooms())
 
     @jwt_required()
     def delete(self, reservation_id=None):
@@ -486,3 +483,44 @@ class Seat(Resource):
     @jwt_required()
     def post(self):
         pass
+
+
+class Statistics(Resource):
+    """
+    统计
+    1. 座位数量
+    2. 预约数量
+    3. 正在进行数量
+    4. 暂离数量
+    5. 迟到数量
+    """
+
+    def get(self):
+        code = 200
+        message = "成功"
+        data = {"info_time": int(time.time()), "seat": len(SeatModel.query.filter(SeatModel.enabled == 1).all()),
+                "reserve": len(ReservationModel.query.filter(ReservationModel.status == 1).all()),
+                "inseat": len(ReservationModel.query.filter(ReservationModel.status == 3).all()),
+                "leave": len(ReservationModel.query.filter(ReservationModel.status == 5).all())}
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
+
+# 定时器
+@scheduler.task('cron', id='record', minute="*")
+def job1():
+    # 信息时间
+    info_time = int(time.time())
+    # 座位数
+    seat = len(SeatModel.query.filter(SeatModel.enabled == 1).all())
+    # 预约人数
+    reserve = len(ReservationModel.query.filter(ReservationModel.status == 1).all())
+    # 在座人数
+    inseat = len(ReservationModel.query.filter(ReservationModel.status == 3).all())
+    # 暂离人数
+    leave = len(ReservationModel.query.filter(ReservationModel.status == 5).all())
+    info = (info_time, seat, reserve, inseat, leave)
+    StatisticsModel.add_data(*info)

@@ -164,6 +164,12 @@ class OptionModel(db.Model):
         return True
 
 
+# 可持续状态
+normal_status = ["1", "3", "5"]
+# 不可持续状态
+over_status = ["2", "4", "6"]
+
+
 class ReservationModel(db.Model):
     __tablename__ = 'reservation'
 
@@ -172,9 +178,9 @@ class ReservationModel(db.Model):
     seat_id = Column(Integer, ForeignKey('seat.id'), nullable=False, comment='座位ID')
     start_time = Column(Integer, nullable=False, comment='预约开始时间')
     end_time = Column(Integer, nullable=False, comment='预约结束时间')
-    cancelled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='取消')
+    # cancelled = Column(TINYINT(1), nullable=False, server_default=text("'0'"), comment='取消')
     # 1: 预约；2: 取消；3:进行中；4: 关闭；5：离开；6：迟到
-    # status = Column(Integer, nullable=False, server_default=text("'1'"), comment='状态')
+    status = Column(Integer, nullable=False, server_default=text("'1'"), comment='状态')
     create_time = Column(TIMESTAMP, nullable=False, server_default=func.now(), comment='预约创建时间')
 
     @staticmethod
@@ -196,7 +202,7 @@ class ReservationModel(db.Model):
         """
         reservations = ReservationModel.query.filter(ReservationModel.user_id == user_id).all()
         for _ in reservations:
-            if _.cancelled:
+            if str(_.status) in over_status:
                 reservations.remove(_)
         return _x(reservations)
 
@@ -220,7 +226,7 @@ class ReservationModel(db.Model):
         reservations = ReservationModel.query.filter(ReservationModel.seat_id == seat_id).all()
         res = _x(reservations)
         for _r in range(len(res)):
-            if res[_r]["cancelled"]:
+            if str(res[_r]["status"]) in over_status:
                 res.pop(_r)
         return res
 
@@ -233,7 +239,7 @@ class ReservationModel(db.Model):
         reservations = ReservationModel.query.filter(ReservationModel.seat_id == seat_id).all()
         times = []
         for _r in reservations:
-            if not _r.cancelled:
+            if str(_r.status) in normal_status:
                 times.append([_r.start_time, _r.end_time])
         return _y(times)
 
@@ -249,13 +255,39 @@ class ReservationModel(db.Model):
 
     @staticmethod
     def cancel(reservation_id):
+        """
+        取消预约
+        :param reservation_id:
+        :return:
+        """
         reservation = ReservationModel.query.filter(ReservationModel.id == reservation_id).all()
         if not bool(reservation):
             return False
         else:
-            reservation[0].cancelled = 1
-            db.session.commit()
-            return True
+            if str(reservation[0].status) == "1":
+                reservation[0].status = 2
+                db.session.commit()
+                return True
+            else:
+                return False
+
+    @staticmethod
+    def close(reservation_id):
+        """
+        终止预约
+        :param reservation_id:
+        :return:
+        """
+        reservation = ReservationModel.query.filter(ReservationModel.id == reservation_id).all()
+        if not bool(reservation):
+            return False
+        else:
+            if str(reservation[0].status) in ["3", "5"]:
+                reservation[0].status = 2
+                db.session.commit()
+                return True
+            else:
+                return False
 
 
 class RoomModel(db.Model):
@@ -427,5 +459,21 @@ class UserModel(db.Model):
             return False
 
 
+class StatisticsModel(db.Model):
+    __tablename__ = 'statistic'
+
+    id = db.Column(db.Integer, primary_key=True)
+    info_time = db.Column(db.Integer, nullable=False, info='采集时间')
+    seat = db.Column(db.Integer, nullable=False, info='总座位数')
+    reserve = db.Column(db.Integer, nullable=False, info='预约数量')
+    inseat = db.Column(db.Integer, nullable=False, info='在座数')
+    leave = db.Column(db.Integer, nullable=False, info='暂时离开人数')
+
+    @staticmethod
+    def add_data(info_time, seat, reserve, inseat, leave):
+        db.session.add(StatisticsModel(info_time=info_time, seat=seat, reserve=reserve, inseat=inseat, leave=leave))
+        db.session.commit()
+
+
 if __name__ == '__main__':
-    print(ReservationModel.get_reservations_by_user_id(1))
+    pass

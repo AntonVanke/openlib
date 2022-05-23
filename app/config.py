@@ -9,12 +9,16 @@ PASSWORD = "11111111a"
 
 
 class Config:
+    # 定时器
+    SCHEDULER_API_ENABLED = True
+
     # 调试
     DEBUG = os.environ.get('FLASK_DEBUG') or True
 
     # 数据库
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'SQLALCHEMY_DATABASE_URI') or f"mysql+pymysql://{USERNAME}:{PASSWORD}@{HOSTNAME}:{PORT}/{DATABASE}"
+    # print(SQLALCHEMY_DATABASE_URI)
     SQLALCHEMY_TRACK_MODIFICATIONS = True
 
     # 安全控制

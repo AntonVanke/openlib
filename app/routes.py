@@ -1,5 +1,5 @@
 from . import api
-from .controller import User, Login, Reserve, Option, Building, Room, Seat
+from .controller import User, Login, Reserve, Option, Building, Room, Seat, Statistics
 
 # 用户
 api.add_resource(User, '/user')
@@ -15,3 +15,5 @@ api.add_resource(Building, '/building', '/building/<building_id>')
 api.add_resource(Room, '/room', '/room/<room_id>')
 # 座位
 api.add_resource(Seat, '/seat/<seat_id>')
+# 信息
+api.add_resource(Statistics, '/info')

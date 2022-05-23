@@ -14,12 +14,14 @@ def generate_salt(_k: int = 8):
     return "".join(random.choices(salt_string, k=_k))
 
 
-def get_hash(_string: str, _salt: str = generate_salt(8)):
+def get_hash(_string: str, _salt: str = None):
     """
     :param _string:
     :param _salt:
     :return: sha3_256($_string.$salt)
     """
+    if _salt is None:
+        _salt = generate_salt(8)
     return hashlib.sha3_256((_string + _salt).encode()).hexdigest() + ":" + _salt
 
 

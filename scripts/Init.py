@@ -84,5 +84,16 @@ class User(db.Model):
     type = Column(TINYINT, nullable=False, server_default=text("1"), comment='用户类型')
 
 
+class Statistic(db.Model):
+    __tablename__ = 'statistic'
+
+    id = db.Column(db.Integer, primary_key=True)
+    info_time = db.Column(db.Integer, nullable=False, info='采集时间')
+    seat = db.Column(db.Integer, nullable=False, info='总座位数')
+    reserve = db.Column(db.Integer, nullable=False, info='预约数量')
+    inseat = db.Column(db.Integer, nullable=False, info='在座数')
+    leave = db.Column(db.Integer, nullable=False, info='暂时离开人数')
+
+
 if __name__ == '__main__':
     db.create_all()
