@@ -1,9 +1,13 @@
 import datetime
+import json
+import time
 
-from sqlalchemy import Column, Integer, String, TIMESTAMP, text, func, ForeignKey
+from sqlalchemy import Column, Integer, String, TIMESTAMP, text, func, ForeignKey, and_
 from sqlalchemy.dialects.mysql import TINYINT, LONGTEXT
 
 from . import db, sha3
+
+td = datetime.timedelta(days=+1)
 
 
 def _x(data):
@@ -15,7 +19,10 @@ def _x(data):
     new_data = []
     for _ in data:
         d = _.__dict__
-        d.pop("_sa_instance_state")
+        try:
+            d.pop("_sa_instance_state")
+        except KeyError:
+            print(f"{d}中没有属性")
         if d.get("create_time", 0):
             d["create_time"] = d["create_time"].__str__()
         new_data.append(d)
@@ -54,6 +61,28 @@ def _y(data):
     # 返回可用时间段
     print(time_d)
     return list(zip(*[iter(time_d)] * 2))
+
+
+def check():
+    now = int(time.time())
+    # 迟到线
+    timeout = now - int(OptionModel.get_option_by_name("time_out")["value"])
+    # 迟到的预约
+    # a = ReservationModel.query.all()
+    # for _ in a:
+    #     print(_.__dict__)
+    timeout_reservations = ReservationModel.query.filter(ReservationModel.status == 1,
+                                                         ReservationModel.start_time < timeout).all()
+    # 完成的预约
+    expire_reservations = ReservationModel.query.filter(ReservationModel.status.in_(["3", "5"]),
+                                                        ReservationModel.start_time < timeout).all()
+    # print(len(timeout_reservations), len(expire_reservations), now)
+    for t in timeout_reservations:
+        t.status = 6
+        db.session.commit()
+    for e in expire_reservations:
+        e.status = 4
+        db.session.commit()
 
 
 class BuildingModel(db.Model):
@@ -190,8 +219,24 @@ class ReservationModel(db.Model):
         :param user_id:
         :return:
         """
-        reservations = ReservationModel.query.filter(ReservationModel.user_id == user_id).all()
-        return _x(reservations)
+        # Fixme: 多表查询座位
+        # reservations = ReservationModel.query.filter(ReservationModel.user_id == user_id).all()
+        _reservations = db.session.query(ReservationModel, SeatModel.room_id) \
+            .select_from(ReservationModel) \
+            .join(SeatModel, ReservationModel.seat_id == SeatModel.id) \
+            .all()
+        print(_reservations)
+        reservations = []
+        # for _ in reservations:
+        #     _[0]["seat_id"] = _[1]
+        for _ in _reservations:
+            a = _[0].__dict__
+            a["room_id"] = _[1]
+            a["create_time"] = a["create_time"].__str__()
+            a.pop("_sa_instance_state")
+            reservations.append(a)
+        print(reservations)
+        return reservations
 
     @staticmethod
     def get_enabled_reservations_by_user_id(user_id):
@@ -312,6 +357,50 @@ class RoomModel(db.Model):
     def get_seats_by_room_id(room_id):
         seats = SeatModel.query.filter(SeatModel.room_id == room_id).all()
         return _x(seats)
+
+    @staticmethod
+    def add_room(name, building_id, enabled):
+        """
+        添加新的房间
+        :param name:
+        :param building_id:
+        :param enabled:
+        :return:
+        """
+        room = RoomModel(name=name, building_id=building_id, enabled=enabled)
+        db.session.add(room)
+        db.session.commit()
+
+    @staticmethod
+    def update_room_by_id(room_id, name=None, building_id=None, enabled=None):
+        """
+        更新房间
+        :param room_id:
+        :param name:
+        :param building_id:
+        :param enabled:
+        :return:
+        """
+        room = RoomModel.query.filter(RoomModel.id == room_id).all()
+        if len(room):
+            room[0].name = name or room[0].name
+            room[0].building_id = building_id or room[0].building_id
+            room[0].enabled = enabled or room[0].enabled
+            db.session.commit()
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def del_room_by_id(room_id):
+        """
+        删除房间
+        :param room_id:
+        :return:
+        """
+        res = RoomModel.query.filter(RoomModel.id == room_id).delete()
+        db.session.commit()
+        return bool(res)
 
 
 class SeatModel(db.Model):
@@ -461,7 +550,6 @@ class UserModel(db.Model):
 
 class StatisticsModel(db.Model):
     __tablename__ = 'statistic'
-
     id = db.Column(db.Integer, primary_key=True)
     info_time = db.Column(db.Integer, nullable=False, info='采集时间')
     seat = db.Column(db.Integer, nullable=False, info='总座位数')
@@ -471,8 +559,88 @@ class StatisticsModel(db.Model):
 
     @staticmethod
     def add_data(info_time, seat, reserve, inseat, leave):
+        """
+        存储统计数据
+        :param info_time:
+        :param seat:
+        :param reserve:
+        :param inseat:
+        :param leave:
+        :return:
+        """
         db.session.add(StatisticsModel(info_time=info_time, seat=seat, reserve=reserve, inseat=inseat, leave=leave))
         db.session.commit()
+
+    @staticmethod
+    def get_data_now():
+        """
+        获取当前的统计数据
+        :return:
+        """
+        # stat = {
+        #     "seat": "当前座位总数",
+        #     "reserve": "当前预约数",
+        #     "inseat": "当前在座数",
+        #     "leave": "当前暂离数"
+        # }
+        seat = len(SeatModel.query.filter(SeatModel.enabled == 1).all())
+        reserve = len(ReservationModel.query.filter(ReservationModel.status == 1).all())
+        inseat = len(ReservationModel.query.filter(ReservationModel.status == 3).all())
+        leave = len(ReservationModel.query.filter(ReservationModel.status == 5).all())
+        stat = [{
+            "status": "seat",
+            "value": seat - leave - inseat,
+            "title": "当前空座位数"
+        }, {
+            "status": "reserve",
+            "value": reserve,
+            "title": "当前预约数"
+        }, {
+            "status": "inseat",
+            "value": inseat,
+            "title": "当前在座数"
+        }, {
+            "status": "leave",
+            "value": leave,
+            "title": "当前暂离数"
+        }]
+        return stat
+        # return {"info_time": int(time.time()), "seat": len(SeatModel.query.filter(SeatModel.enabled == 1).all()),
+        #         "reserve": len(ReservationModel.query.filter(ReservationModel.status == 1).all()),
+        #         "inseat": len(ReservationModel.query.filter(ReservationModel.status == 3).all()),
+        #         "leave": len(ReservationModel.query.filter(ReservationModel.status == 5).all())}
+
+    @staticmethod
+    def get_data_by_time(info_time):
+        """
+        获取指定时间的信息
+        :param info_time:
+        :return:
+        """
+        info = StatisticsModel.query.filter(StatisticsModel.info_time > info_time - 30,
+                                            StatisticsModel.info_time < info_time + 30).all()
+        if not len(info):
+            return {'reserve': 0, 'id': 0, 'leave': 0, 'seat': 0, 'inseat': 0, 'info_time': info_time}
+        return _x(info)[0]
+
+    @staticmethod
+    def get_inseat_data_by_times(limit):
+        """
+        获取最近几次的在座数据
+        :param limit:
+        :return:
+        """
+        info = StatisticsModel.query.order_by(StatisticsModel.info_time.desc()).limit(limit).all()
+        return _x(info)
+
+    @staticmethod
+    def get_data_by_day(date):
+        # Fixme: 获取今天的统计信息
+        #  1. 如何排除重复的?
+        today = datetime.datetime.strptime(date, "%Y-%m-%d")
+        tomorrow = today + td
+        StatisticsModel.query.filter(StatisticsModel.info_time >= int(today.timestamp()),
+                                     StatisticsModel.info_time < int(tomorrow.timestamp())).all()
 
 
 if __name__ == '__main__':

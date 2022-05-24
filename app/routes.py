@@ -16,4 +16,4 @@ api.add_resource(Room, '/room', '/room/<room_id>')
 # 座位
 api.add_resource(Seat, '/seat/<seat_id>')
 # 信息
-api.add_resource(Statistics, '/info')
+api.add_resource(Statistics, '/info', '/info/<info_time>')

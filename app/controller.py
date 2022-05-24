@@ -5,7 +5,8 @@ from flask import jsonify
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
-from .models import UserModel, ReservationModel, RoomModel, SeatModel, OptionModel, BuildingModel, StatisticsModel
+from .models import UserModel, ReservationModel, RoomModel, SeatModel, OptionModel, BuildingModel, StatisticsModel, \
+    check
 from . import jwt, scheduler
 
 
@@ -148,7 +149,10 @@ class Reserve(Resource):
         start_time = int(args["start_time"])
         end_time = int(args["end_time"])
         # 判断座位是否存在
-        if not SeatModel.is_exist(seat_id) and not SeatModel.is_usable_seat(seat_id):
+        if not SeatModel.is_exist(seat_id):
+            code = 201
+            message = f"`seat_id:`{seat_id} 不存在的座位"
+        elif not SeatModel.is_usable_seat(seat_id):
             code = 201
             message = f"`seat_id:`{seat_id} 不存在的座位"
         else:
@@ -456,7 +460,107 @@ class Room(Resource):
 
     @jwt_required()
     def post(self):
-        pass
+        """
+        添加房间
+        :return:
+        """
+        code = 200
+        message = "成功"
+        data = None
+        if int(get_jwt_identity()["type"]) != 2:
+            # 如果不是管理员退出
+            return {
+                "code": 302,
+                "message": "访问受限",
+                "data": None
+            }
+        args = reqparse.RequestParser() \
+            .add_argument('name', type=str, location='json', required=False) \
+            .add_argument('enabled', type=str, location='json', required=False) \
+            .add_argument('building', type=str, location='json', required=False) \
+            .add_argument('_method', type=str, location='json', required=False) \
+            .parse_args()
+        if args["_method"].lower() == "put":
+            self.put()
+        elif args["_method"].lower() == "delete":
+            return self.delete()
+
+        if args["name"] is None or args["enabled"] is None or args["building"] is None:
+            code = 201
+            message = f"参数不完整({args['name']},{args['enabled']},{args['building']})"
+        elif len(args["name"]) > 20 or len(args["enabled"]) > 1 or len(args["building"]) > 2:
+            code = 202
+            message = "参数超过限制"
+        else:
+            RoomModel.add_room(args["name"], args["building"], args["enabled"])
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
+    @jwt_required()
+    def put(self):
+        """
+        修改房间
+        :return:
+        """
+        code = 200
+        message = "成功"
+        data = None
+        if int(get_jwt_identity()["type"]) != 2:
+            # 如果不是管理员退出
+            return {
+                "code": 302,
+                "message": "访问受限",
+                "data": None
+            }
+        args = reqparse.RequestParser() \
+            .add_argument('id', type=str, location='json', required=False) \
+            .add_argument('name', type=str, location='json', required=False) \
+            .add_argument('enabled', type=str, location='json', required=False) \
+            .add_argument('building', type=str, location='json', required=False) \
+            .parse_args()
+        if args["id"] is None and args["building"] is None and args["enabled"] is None:
+            message = f"参数不完整({args['name']},{args['enabled']},{args['building']})"
+        if not RoomModel.update_room_by_id(args["id"], args["name"], args["building"], args["enabled"]):
+            code = 201
+            message = "失败"
+            data = RoomModel.get_rooms()
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
+    @jwt_required()
+    def delete(self):
+        """
+        删除房间
+        :return:
+        """
+        code = 200
+        message = "成功"
+        data = None
+        if int(get_jwt_identity()["type"]) != 2:
+            # 如果不是管理员退出
+            return {
+                "code": 302,
+                "message": "访问受限",
+                "data": None
+            }
+        args = reqparse.RequestParser() \
+            .add_argument('id', type=str, location='json', required=False) \
+            .parse_args()
+        if not RoomModel.del_room_by_id(room_id=args["id"]):
+            code = 201
+            message = "失败"
+            data = RoomModel.get_rooms()
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
 
 
 class Seat(Resource):
@@ -495,13 +599,16 @@ class Statistics(Resource):
     5. 迟到数量
     """
 
-    def get(self):
+    def get(self, info_time=None):
+        check()
         code = 200
         message = "成功"
-        data = {"info_time": int(time.time()), "seat": len(SeatModel.query.filter(SeatModel.enabled == 1).all()),
-                "reserve": len(ReservationModel.query.filter(ReservationModel.status == 1).all()),
-                "inseat": len(ReservationModel.query.filter(ReservationModel.status == 3).all()),
-                "leave": len(ReservationModel.query.filter(ReservationModel.status == 5).all())}
+        if info_time is None:
+            data = StatisticsModel.get_data_now()
+        elif int(info_time) < 100:
+            data = StatisticsModel.get_inseat_data_by_times(int(info_time))
+        else:
+            data = StatisticsModel.get_data_by_time(int(info_time))
         return {
             "code": code,
             "message": message,
@@ -524,3 +631,13 @@ def job1():
     leave = len(ReservationModel.query.filter(ReservationModel.status == 5).all())
     info = (info_time, seat, reserve, inseat, leave)
     StatisticsModel.add_data(*info)
+
+
+@scheduler.task('cron', id='check', minute="*")
+# @scheduler.task('cron', id='check', second="*")
+def job2():
+    """
+    判定关闭和迟到的座位
+    :return:
+    """
+    check()
