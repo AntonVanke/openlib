@@ -421,6 +421,12 @@ class SeatModel(db.Model):
     enabled = Column(TINYINT(1), nullable=False, server_default=text("'1'"), comment='启用')
 
     @staticmethod
+    def add_seat(room_id, enabled=1):
+        seat = SeatModel(room_id=room_id, enabled=enabled)
+        db.session.add(seat)
+        db.session.commit()
+
+    @staticmethod
     def get_time_slot_by_seat_id(seat_id):
         """
         获取座位的有效预约时段
@@ -474,6 +480,36 @@ class SeatModel(db.Model):
         """
         seat = SeatModel.query.filter(SeatModel.id == id).all()
         return _x(seat)[0]
+
+    @staticmethod
+    def del_seat_by_id(id):
+        """
+        删除座位
+        :param id:
+        :return:
+        """
+        res = SeatModel.query.filter(SeatModel.id == id).delete()
+        db.session.commit()
+        return bool(res)
+
+    @staticmethod
+    def update_seat_by_id(seat_id, room_id=None, enabled=None):
+        """
+        更新座位
+        :param seat_id:
+        :param name:
+        :param room_id:
+        :param enabled:
+        :return:
+        """
+        seats = SeatModel.query.filter(SeatModel.id == seat_id).all()
+        if len(seats):
+            seats[0].room_id = room_id or seats[0].room_id
+            seats[0].enabled = enabled or seats[0].enabled
+            db.session.commit()
+            return True
+        else:
+            return False
 
 
 class UserModel(db.Model):
@@ -556,6 +592,12 @@ class UserModel(db.Model):
             return True
         else:
             return False
+
+    @staticmethod
+    def add_user(self, user):
+        # fixme: 答辩前半小时狂写的
+        db.session.add(user)
+        db.session.commit()
 
 
 class StatisticsModel(db.Model):

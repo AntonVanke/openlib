@@ -26,8 +26,8 @@ VALUES (1, 1, 1, '五楼天井区');
 # VALUES (11, 1, 1, '朗读亭');
 # INSERT INTO room (id, building_id, enabled, name)
 # VALUES (12, 1, 1, '一层大厅');
-# INSERT INTO room (id, building_id, enabled, name)
-# VALUES (15, 3, 1, '4层工程技术类借阅区');
+INSERT INTO room (id, building_id, enabled, name)
+VALUES (15, 3, 1, '4层工程技术类借阅区');
 # INSERT INTO room (id, building_id, enabled, name)
 # VALUES (17, 3, 1, '5层工程技术类借阅区');
 # INSERT INTO room (id, building_id, enabled, name)
@@ -52,22 +52,57 @@ VALUES (1, 1, 1, '五楼天井区');
 # VALUES (33, 3, 1, '2层报刊阅览区');
 # INSERT INTO room (id, building_id, enabled, name)
 # VALUES (34, 3, 1, '4层计算机类借阅区');
-INSERT INTO room (id, building_id, enabled, name)
-VALUES (35, 3, 1, '6层社会科学类借阅区(Ⅱ)');
-INSERT INTO room (id, building_id, enabled, name)
-VALUES (7, 2, 1, '负一楼自习区');
+# INSERT INTO room (id, building_id, enabled, name)
+# VALUES (35, 3, 1, '6层社会科学类借阅区(Ⅱ)');
+# INSERT INTO room (id, building_id, enabled, name)
+# VALUES (7, 2, 1, '负一楼自习区');
 # INSERT INTO room (id, building_id, enabled, name)
 # VALUES (8, 2, 1, '一楼自习区');
 # INSERT INTO room (id, building_id, enabled, name)
 # VALUES (9, 2, 1, '三楼自习区A');
-# INSERT INTO room (id, building_id, enabled, name)
-# VALUES (10, 2, 1, '三楼自习区B');
+INSERT INTO room (id, building_id, enabled, name)
+VALUES (10, 2, 1, '三楼自习区B');
 
 # 将id=2的场馆关闭
 UPDATE building t
 SET t.enabled = 2
 WHERE t.id = 2;
+
 # 将id=2的场馆开放
 UPDATE building t
 SET t.enabled = 1
 WHERE t.id = 2;
+
+# 添加座位
+# 添加1 房间假数据
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (1, 1, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (2, 1, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (3, 1, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (4, 1, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (5, 1, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (6, 1, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (7, 1, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (8, 1, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (9, 1, 1);
+
+# 添加10 房间假数据
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (11, 10, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (12, 10, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (13, 10, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (14, 10, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (15, 10, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (16, 10, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (17, 10, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (18, 10, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (19, 10, 1);
+
+# 添加15 房间假数据
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (21, 15, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (22, 15, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (23, 15, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (24, 15, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (25, 15, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (26, 15, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (27, 15, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (28, 15, 1);
+INSERT INTO openlib.seat (id, room_id, enabled) VALUES (29, 15, 1);

@@ -7,7 +7,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 
 from .models import UserModel, ReservationModel, RoomModel, SeatModel, OptionModel, BuildingModel, StatisticsModel, \
     check
-from . import jwt, scheduler
+from . import jwt, scheduler, sha3
 
 
 @jwt.expired_token_loader
@@ -482,10 +482,11 @@ class Room(Resource):
             .add_argument('building', type=str, location='json', required=False) \
             .add_argument('_method', type=str, location='json', required=False) \
             .parse_args()
-        if args["_method"].lower() == "put":
-            self.put()
-        elif args["_method"].lower() == "delete":
-            return self.delete()
+        if args["_method"] is not None:
+            if args["_method"].lower() == "put":
+                return self.put()
+            elif args["_method"].lower() == "delete":
+                return self.delete()
 
         if args["name"] is None or args["enabled"] is None or args["building"] is None:
             code = 201
@@ -588,7 +589,107 @@ class Seat(Resource):
 
     @jwt_required()
     def post(self):
-        pass
+        """
+        添加座位
+        :return:
+        """
+        code = 200
+        message = "成功"
+        data = None
+        if int(get_jwt_identity()["type"]) != 2:
+            # 如果不是管理员退出
+            return {
+                "code": 302,
+                "message": "访问受限",
+                "data": None
+            }
+        args = reqparse.RequestParser() \
+            .add_argument('enabled', type=str, location='json', required=False) \
+            .add_argument('room_id', type=str, location='json', required=False) \
+            .add_argument('_method', type=str, location='json', required=False) \
+            .parse_args()
+        if args["_method"] is not None:
+            if args["_method"].lower() == "put":
+                return self.put()
+            elif args["_method"].lower() == "delete":
+                return self.delete()
+
+        if args["enabled"] is None or args["room_id"] is None:
+            code = 201
+            message = f"参数不完整({args['room_id']},{args['enabled']})"
+        elif len(args["enabled"]) > 1 or len(args["room_id"]) > 3:
+            code = 202
+            message = "参数超过限制"
+        else:
+            SeatModel.add_seat(args["room_id"], args["enabled"])
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
+    @jwt_required()
+    def put(self):
+        """
+        修改座位
+        :return:
+        """
+        code = 200
+        message = "成功"
+        data = None
+        if int(get_jwt_identity()["type"]) != 2:
+            # 如果不是管理员退出
+            return {
+                "code": 302,
+                "message": "访问受限",
+                "data": None
+            }
+        args = reqparse.RequestParser() \
+            .add_argument('id', type=str, location='json', required=False) \
+            .add_argument('enabled', type=str, location='json', required=False) \
+            .add_argument('room_id', type=str, location='json', required=False) \
+            .parse_args()
+
+        if args["id"] is None and args["room_id"] is None and args["enabled"] is None:
+            message = f"参数不完整({args['name']},{args['enabled']},{args['room_id']})"
+        if not SeatModel.update_seat_by_id(args["id"], args["room_id"], args["enabled"]):
+            code = 201
+            message = "失败"
+            data = RoomModel.get_rooms()
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
+
+    @jwt_required()
+    def delete(self):
+        """
+        删除座位
+        :return:
+        """
+        code = 200
+        message = "成功"
+        data = None
+        if int(get_jwt_identity()["type"]) != 2:
+            # 如果不是管理员退出
+            return {
+                "code": 302,
+                "message": "访问受限",
+                "data": None
+            }
+        args = reqparse.RequestParser() \
+            .add_argument('id', type=str, location='json', required=False) \
+            .parse_args()
+        if not SeatModel.del_seat_by_id(id=args["id"]):
+            code = 201
+            message = "失败"
+            data = SeatModel.get_seats()
+        return {
+            "code": code,
+            "message": message,
+            "data": data
+        }
 
 
 class Statistics(Resource):
