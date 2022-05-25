@@ -76,9 +76,11 @@ def check():
     # 完成的预约
     expire_reservations = ReservationModel.query.filter(ReservationModel.status.in_(["3", "5"]),
                                                         ReservationModel.start_time < timeout).all()
-    # print(len(timeout_reservations), len(expire_reservations), now)
+    print(len(timeout_reservations), len(expire_reservations), now)
     for t in timeout_reservations:
-        t.status = 6
+        # TODO: 演示模式迟到默认直接入座
+        t.status = 2
+        # t.status = 6
         db.session.commit()
     for e in expire_reservations:
         e.status = 4
@@ -224,8 +226,9 @@ class ReservationModel(db.Model):
         _reservations = db.session.query(ReservationModel, SeatModel.room_id) \
             .select_from(ReservationModel) \
             .join(SeatModel, ReservationModel.seat_id == SeatModel.id) \
+            .filter(ReservationModel.user_id == user_id) \
             .all()
-        print(_reservations)
+        # print(_reservations)
         reservations = []
         # for _ in reservations:
         #     _[0]["seat_id"] = _[1]
@@ -235,7 +238,7 @@ class ReservationModel(db.Model):
             a["create_time"] = a["create_time"].__str__()
             a.pop("_sa_instance_state")
             reservations.append(a)
-        print(reservations)
+        # print(reservations)
         return reservations
 
     @staticmethod
@@ -245,11 +248,18 @@ class ReservationModel(db.Model):
         :param user_id:
         :return:
         """
-        reservations = ReservationModel.query.filter(ReservationModel.user_id == user_id).all()
-        for _ in reservations:
-            if str(_.status) in over_status:
-                reservations.remove(_)
-        return _x(reservations)
+        _reservations = db.session.query(ReservationModel, SeatModel.room_id) \
+            .select_from(ReservationModel) \
+            .join(SeatModel, ReservationModel.seat_id == SeatModel.id) \
+            .filter(ReservationModel.user_id == user_id, ReservationModel.status.in_(normal_status)).all()
+        reservations = []
+        for _ in _reservations:
+            a = _[0].__dict__
+            a["room_id"] = _[1]
+            a["create_time"] = a["create_time"].__str__()
+            a.pop("_sa_instance_state")
+            reservations.append(a)
+        return reservations
 
     @staticmethod
     def get_reservations_by_reservation_id(reservation_id):

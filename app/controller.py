@@ -110,6 +110,8 @@ class Reserve(Resource):
         message = "成功"
         if reservation_id is None:
             data = ReservationModel.get_reservations_by_user_id(user_id=get_jwt_identity()["id"])
+        elif int(reservation_id) == 0:
+            data = ReservationModel.get_enabled_reservations_by_user_id(get_jwt_identity()["id"])
         else:
             data = ReservationModel.get_reservations_by_reservation_id(reservation_id)
         return {
@@ -418,15 +420,15 @@ class Building(Resource):
             code = 202
             message = f"[id]:{building_id}: 查询不存在"
         else:
-            for building in BuildingModel.get_buildings():
-                if building["name"] == args["name"]:
-                    code = 203
-                    message = f"重复的字段: [name]:`{args['name']}`"
-                    return {
-                        "code": code,
-                        "message": message,
-                        "data": data
-                    }
+            # for building in BuildingModel.get_buildings():
+            #     if building["name"] == args["name"]:
+            #         code = 203
+            #         message = f"重复的字段: [name]:`{args['name']}`"
+            #         return {
+            #             "code": code,
+            #             "message": message,
+            #             "data": data
+            #         }
             BuildingModel.edit_building(building_id, name=args["name"], enabled=args["enabled"])
         return {
             "code": code,
@@ -634,7 +636,6 @@ def job1():
 
 
 @scheduler.task('cron', id='check', minute="*")
-# @scheduler.task('cron', id='check', second="*")
 def job2():
     """
     判定关闭和迟到的座位
